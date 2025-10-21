@@ -2,6 +2,7 @@ import os, json, numpy as np, pickle , renumpying
 from renumpying import sqroot, sum_func, exp , unifromity , lcg , uniformity , zero
 from random_number_generators import lcg , uniformity , randint
 import redoing_numpy_arrays as rna
+import remaking_the_logarithm as rtl
 # --- Load or initialize move history ---
 if os.path.exists("moves.json") and os.path.getsize("moves.json") > 0:
     with open("moves.json", "r") as f:
@@ -53,7 +54,7 @@ def generate_random_rps_input(k):
         if move == 0: x.extend([1,0,0])
         elif move == 1: x.extend([0,1,0])
         else: x.extend([0,0,1])
-    return np.array(x), moves.tolist()
+    return rna.Array(x), moves.tolist()
 
 # --- Generate random dataset ---
 num_samples = 500
@@ -62,13 +63,13 @@ Y = np.zeros((num_samples, 3))
 for i in range(num_samples):
     x_vec, moves_hist = generate_random_rps_input(history_length)
     X.append(x_vec)
-    move = np.random.randint(0,3)
+    move = randint(0,3)
     Y[i, move] = 1
-X = np.array(X)
+X = rna.Array(X)
 
 # --- Cross-entropy loss ---
 def cross_entropy(y_true, y_pred):
-    return -np.sum(y_true * np.log(y_pred + 1e-8))
+    return -sum_func(y_true * rtl.my_log(y_pred + 1e-8))
 
 # --- Training loop ---
 epochs = 2000
