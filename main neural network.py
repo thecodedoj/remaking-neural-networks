@@ -147,13 +147,21 @@ for epoch in range(epochs):
         y = Y[i]
 
         # --- Forward pass ---
-        z1 = renumpying.dot(x, W1) + b1
+        # Helper function for vector addition
+        def vec_add(a, b):
+            if hasattr(a, 'data'): a = a.data
+            if hasattr(b, 'data'): b = b.data
+            return [a[i] + b[i] for i in range(len(a))]
+
+        # Forward pass with explicit vector addition
+        z1 = vec_add(renumpying.dot(x, W1), b1)
         a1 = relu(z1)
-        z2 = renumpying.dot(a1, W2) + b2
+        z2 = vec_add(renumpying.dot(a1, W2), b2)
         a2 = relu(z2)
-        z3 = renumpying.dot(a2, W3) + b3
+        z3 = vec_add(renumpying.dot(a2, W3), b3)
         a3 = relu(z3)
-        z4 = renumpying.dot(a3, W4) + b4
+        z4 = vec_add(renumpying.dot(a3, W4), b4)
+        print(f"z4 type: {type(z4)}, shape/length: {len(z4)}, first few elements: {z4[:3]}")
         y_pred = softmax(z4)
 
         # --- Compute loss ---
