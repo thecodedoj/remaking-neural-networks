@@ -21,10 +21,28 @@ output_size = 3
 
 # --- Activation functions ---
 def relu(x):
-    return max(0,x)
+    # Convert Array to list
+    if hasattr(x, 'data'):
+        x = x.data
+    return [max(0, xi) for xi in x]
 
 def relu_derivative(x):
-    return (x > 0).astype(float)
+    """
+    Compute the derivative of ReLU.
+    Returns a native Python list of 0/1 floats.
+    
+    x: can be
+        - a plain list of numbers
+        - an instance of rna.Array
+    """
+    # If x is your Array class, extract the internal data
+    if hasattr(x, 'data'):
+        x = x.data
+    
+    # If x is a nested list, flatten one level (optional, depends on use)
+    # Here we assume x is 1D
+    return [1.0 if xi > 0 else 0.0 for xi in x]
+
 def softmax(x):
     exp_x = exp(x - max(x))
     return exp_x / sum_func(exp_x)
@@ -54,7 +72,7 @@ def generate_random_rps_input(k):
         if move == 0: x.extend([1,0,0])
         elif move == 1: x.extend([0,1,0])
         else: x.extend([0,0,1])
-    return rna.Array(x), moves.tolist()
+    return rna.Array(x), moves
 
 # --- Generate random dataset ---
 num_samples = 500
@@ -95,21 +113,31 @@ for epoch in range(epochs):
         total_loss += cross_entropy(y, y_pred)
 
         # --- Backpropagation ---
-        dz4 = y_pred - y
+        # --- Backpropagation ---
+
+        # dz4 = y_pred - y
+        dz4 = [y_pred_i - y_i for y_pred_i, y_i in zip(y_pred, y)]
         dW4 = renumpying.outer_array(a3, dz4)
         db4 = dz4
 
-        dz3 = (W4 @ dz4) * relu_derivative(z3)
+        # dz3 = dot(W4, dz4) * relu_derivative(z3)
+        dz3_pre = renumpying.dot(W4, dz4)  # dot product
+        dz3 = [dz3_pre[i] * relu_derivative(z3)[i] for i in range(len(dz3_pre))]
         dW3 = renumpying.outer_array(a2, dz3)
         db3 = dz3
 
-        dz2 = (W3 @ dz3) * relu_derivative(z2)
+        # dz2 = dot(W3, dz3) * relu_derivative(z2)
+        dz2_pre = renumpying.dot(W3, dz3)
+        dz2 = [dz2_pre[i] * relu_derivative(z2)[i] for i in range(len(dz2_pre))]
         dW2 = renumpying.outer_array(a1, dz2)
         db2 = dz2
 
-        dz1 = (W2 @ dz2) * relu_derivative(z1)
+        # dz1 = dot(W2, dz2) * relu_derivative(z1)
+        dz1_pre = renumpying.dot(W2, dz2)
+        dz1 = [dz1_pre[i] * relu_derivative(z1)[i] for i in range(len(dz1_pre))]
         dW1 = renumpying.outer_array(x, dz1)
         db1 = dz1
+
 
         # --- Gradient updates ---
         W4 -= learning_rate * dW4
@@ -139,15 +167,15 @@ predicted_move = int(renumpying.argmax(y_pred))
 your_move = (predicted_move + 1) % 3
 
 # --- Save weights and biases ---
-all_my_weights_biases = {
-    "layer_1": {"weights": W1.tolist(), "biases": b1.tolist()},
-    "layer_2": {"weights": W2.tolist(), "biases": b2.tolist()},
-    "layer_3": {"weights": W3.tolist(), "biases": b3.tolist()},
-    "layer_4": {"weights": W4.tolist(), "biases": b4.tolist()},
-}
+#all_my_weights_biases = {
+    #"layer_1": {"weights": W1.tolist(), "biases": b1.tolist()},
+    #"layer_2": {"weights": W2.tolist(), "biases": b2.tolist()},
+    #"layer_3": {"weights": W3.tolist(), "biases": b3.tolist()},
+    #"layer_4": {"weights": W4.tolist(), "biases": b4.tolist()},
+#}
 
-with open("weights_biases.pkl", "wb") as f:
-    pickle.dump(all_my_weights_biases, f)
+#with open("weights_biases.pkl", "wb") as f:
+    #pickle.dump(all_my_weights_biases, f)
 
 # --- Print predictions ---
 print("\nPredicted opponent move:", ["Rock","Paper","Scissors"][predicted_move])
