@@ -1,9 +1,21 @@
 class Array:
     def __init__(self, data):
-        self.data = data
+        if isinstance(data, list):
+            # If elements are Arrays, get their data
+            self.data = [x.data if isinstance(x, Array) else x for x in data]
+        else:
+            self.data = data
 
     def __str__(self):
         return str(self.data)
+        
+    def __getitem__(self, index):
+        if isinstance(self.data[index], list):
+            return Array(self.data[index])
+        return self.data[index]
+        
+    def __setitem__(self, index, value):
+        self.data[index] = value.data if isinstance(value, Array) else value
 
     def get_shape(self):
         """Return the shape of the array as a tuple."""

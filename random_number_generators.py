@@ -34,14 +34,24 @@ def uniformity(low, high, size=None, seed_start=1):
         matrix.append(row)
     return matrix
 
-def randint(x, y, z, seed_start=1):
+def randint(x, y, z=None):
     """
-    Generate z pseudo-random integers between x and y inclusive.
+    Generate random integers between x and y (inclusive).
+    - If z is None, return a single integer.
+    - If z is provided, return a list of z integers.
     """
-    result = []
-    seed = seed_start
-    while len(result) < z:
-        r, seed = lcg(seed)
-        val = x + r % (y - x + 1)  # scale into [x, y]
-        result.append(val)
-    return result
+    def single_int(seed=1):
+        # Simple LCG-based random integer
+        r, _ = lcg(seed)  # Unpack the tuple, we only need the first value
+        r = r % (y - x + 1) + x
+        return r
+
+    if z is None:
+        return single_int()
+    else:
+        result = []
+        seed = 1
+        for _ in range(z):
+            result.append(single_int(seed))
+            seed += 1
+        return result

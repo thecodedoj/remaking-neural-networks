@@ -21,10 +21,21 @@ output_size = 3
 
 # --- Activation functions ---
 def relu(x):
+    print(f"ReLU input type: {type(x)}")  # Debug print
     # Convert Array to list
     if hasattr(x, 'data'):
         x = x.data
-    return [max(0, xi) for xi in x]
+        print(f"ReLU extracted data type: {type(x)}")  # Debug print
+    
+    # Ensure x is a flat list
+    if isinstance(x, list) and len(x) > 0 and isinstance(x[0], list):
+        x = [item for sublist in x for item in sublist]  # flatten one level
+        
+    print(f"ReLU x before: {x[:5]}...")  # Show first few elements
+    result = [max(0, float(xi)) for xi in x]  # Convert to float to ensure consistency
+    print(f"ReLU input shape: {len(x)}, output shape: {len(result)}")
+    print(f"ReLU result first few elements: {result[:5]}...")  # Show first few elements
+    return result
 
 def relu_derivative(x):
     """
@@ -44,24 +55,45 @@ def relu_derivative(x):
     return [1.0 if xi > 0 else 0.0 for xi in x]
 
 def softmax(x):
-    exp_x = exp(x - max(x))
-    return exp_x / sum_func(exp_x)
+    # Ensure x is a plain list (extract data if necessary)
+    if hasattr(x, 'data'):
+        x = x.data
+    # If x is a nested list (e.g., shape (n,1)), flatten one level
+    if isinstance(x, list) and len(x) > 0 and isinstance(x[0], list):
+        x = [item for sublist in x for item in sublist]
+
+    # Numerically stable softmax for lists
+    m = max(x)
+    exps = [exp(xi - m) for xi in x]
+    s = sum_func(exps)
+    return [e / s for e in exps]
 
 # --- Xavier initialization ---
 def xavier_init(size_in, size_out):
     limit = sqroot(6 / (size_in + size_out))
-    return uniformity(-limit, limit, size=(size_in, size_out), seed_start=1)
+    # Initialize with correct orientation from the start
+    weights = uniformity(-limit, limit, size=(size_in, size_out), seed_start=1)
+    return weights
 
-  
 
 # --- Initialize weights and biases ---
+def print_shape(matrix, name):
+    if isinstance(matrix[0], list):
+        print(f"{name} shape: ({len(matrix)}, {len(matrix[0])})")
+    else:
+        print(f"{name} shape: ({len(matrix)},)")
+
 W1 = xavier_init(input_size, hidden1_size)
+print_shape(W1, "W1")
 b1 = zero(hidden1_size)
 W2 = xavier_init(hidden1_size, hidden2_size)
+print_shape(W2, "W2")
 b2 = zero(hidden2_size)
 W3 = xavier_init(hidden2_size, hidden3_size)
+print_shape(W3, "W3")
 b3 = zero(hidden3_size)
 W4 = xavier_init(hidden3_size, output_size)
+print_shape(W4, "W4")
 b4 = zero(output_size)
 
 # --- Generate random RPS input ---
@@ -81,13 +113,28 @@ Y = renumpying.zero((num_samples, 3))
 for i in range(num_samples):
     x_vec, moves_hist = generate_random_rps_input(history_length)
     X.append(x_vec)
-    move = randint(0,3)
-    Y[i, move] = 1
+    move = randint(0,3,1)[0]
+    Y[i][move] = 1
 X = rna.Array(X)
 
 # --- Cross-entropy loss ---
 def cross_entropy(y_true, y_pred):
-    return -sum_func(y_true * rtl.my_log(y_pred + 1e-8))
+    # Ensure lists
+    if hasattr(y_true, 'data'):
+        y_true = y_true.data
+    if hasattr(y_pred, 'data'):
+        y_pred = y_pred.data
+    # Flatten nested lists one level
+    if isinstance(y_true, list) and len(y_true) > 0 and isinstance(y_true[0], list):
+        y_true = [item for sub in y_true for item in sub]
+    if isinstance(y_pred, list) and len(y_pred) > 0 and isinstance(y_pred[0], list):
+        y_pred = [item for sub in y_pred for item in sub]
+
+    eps = 1e-8
+    vals = []
+    for yt, yp in zip(y_true, y_pred):
+        vals.append(yt * rtl.my_log(yp + eps))
+    return -sum_func(vals)
 
 # --- Training loop ---
 epochs = 2000
@@ -139,28 +186,37 @@ for epoch in range(epochs):
         db1 = dz1
 
 
-        # --- Gradient updates ---
-        W4 -= learning_rate * dW4
-        b4 -= learning_rate * db4
-        W3 -= learning_rate * dW3
-        b3 -= learning_rate * db3
-        W2 -= learning_rate * dW2
-        b2 -= learning_rate * db2
-        W1 -= learning_rate * dW1
-        b1 -= learning_rate * db1
+        # --- Gradient updates (elementwise to handle plain python lists) ---
+        def update_weights(W, dW, lr):
+            for i in range(len(W)):
+                for j in range(len(W[0])):
+                    W[i][j] -= lr * dW[i][j]
+
+        def update_bias(b, db, lr):
+            for i in range(len(b)):
+                b[i] -= lr * db[i]
+
+        update_weights(W4, dW4, learning_rate)
+        update_bias(b4, db4, learning_rate)
+        update_weights(W3, dW3, learning_rate)
+        update_bias(b3, db3, learning_rate)
+        update_weights(W2, dW2, learning_rate)
+        update_bias(b2, db2, learning_rate)
+        update_weights(W1, dW1, learning_rate)
+        update_bias(b1, db1, learning_rate)
 
     if epoch % 100 == 0:
         print(f"Epoch {epoch}, Loss: {total_loss/num_samples:.4f}")
 
 # --- Test prediction ---
 x_test_vec, x_test_history = generate_random_rps_input(history_length)
-z1 = renumpying.outer_array(x_test_vec, W1) + b1
+z1 = renumpying.dot(x_test_vec, W1) + b1
 a1 = relu(z1)
-z2 = renumpying.outer_array(a1, W2) + b2
+z2 = renumpying.dot(a1, W2) + b2
 a2 = relu(z2)
-z3 = renumpying.outer_array(a2, W3) + b3
+z3 = renumpying.dot(a2, W3) + b3
 a3 = relu(z3)
-z4 = renumpying.outer_array(a3, W4) + b4
+z4 = renumpying.dot(a3, W4) + b4
 y_pred = softmax(z4)
 
 predicted_move = int(renumpying.argmax(y_pred))
