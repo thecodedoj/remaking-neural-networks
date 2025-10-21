@@ -1,41 +1,47 @@
 def lcg(seed):
+    """
+    Linear Congruential Generator (LCG)
+    Returns: (random_int, next_seed)
+    """
     m = 2**32
     a = 1664525
     c = 1013904223
-    n = 21
-    so_much_math = (a**n * seed + c * (a**n - 1) // (a - 1))
-    return so_much_math % m
+    next_seed = (a * seed + c) % m
+    return next_seed, next_seed  # return value and new seed
+
 def uniformity(low, high, size=None, seed_start=1):
     """
     Generate pseudo-random numbers between low and high.
-    
     - size=None -> returns a single float
     - size=(rows, cols) -> returns a 2D list
     """
     def single_random(seed):
-        r, m = lcg(seed)
-        return low + (high - low) * r / m
+        r, next_seed = lcg(seed)
+        return low + (high - low) * r / (2**32), next_seed
 
     if size is None:
-        return single_random(seed_start)
-    
+        val, _ = single_random(seed_start)
+        return val
+
     rows, cols = size
     matrix = []
     seed = seed_start
     for i in range(rows):
         row = []
         for j in range(cols):
-            row.append(single_random(seed))
-            seed += 1  # increment seed for next number
+            val, seed = single_random(seed)
+            row.append(val)
         matrix.append(row)
     return matrix
-def randint(x,y,z):
-    the_list = []
-    while len(the_list) < z:
-        for i in range(z):
-            the_lcg = int(lcg(34))
-            if x <= the_lcg <= y:
-                the_list.append(the_lcg)
-            else:
-                del the_lcg
-    return the_list 
+
+def randint(x, y, z, seed_start=1):
+    """
+    Generate z pseudo-random integers between x and y inclusive.
+    """
+    result = []
+    seed = seed_start
+    while len(result) < z:
+        r, seed = lcg(seed)
+        val = x + r % (y - x + 1)  # scale into [x, y]
+        result.append(val)
+    return result

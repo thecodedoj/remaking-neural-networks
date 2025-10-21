@@ -1,5 +1,5 @@
 import os, json,pickle , renumpying
-from renumpying import sqroot, sum_func, exp , unifromity , lcg , uniformity , zero
+from renumpying import sqroot, sum_func, exp, zero
 from random_number_generators import lcg , uniformity , randint
 import redoing_numpy_arrays as rna
 import remaking_the_logarithm as rtl
