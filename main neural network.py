@@ -1,4 +1,4 @@
-import os, json, numpy as np, pickle , renumpying
+import os, json,pickle , renumpying
 from renumpying import sqroot, sum_func, exp , unifromity , lcg , uniformity , zero
 from random_number_generators import lcg , uniformity , randint
 import redoing_numpy_arrays as rna
@@ -59,7 +59,7 @@ def generate_random_rps_input(k):
 # --- Generate random dataset ---
 num_samples = 500
 X = []
-Y = np.zeros((num_samples, 3))
+Y = renumpying.zero((num_samples, 3))
 for i in range(num_samples):
     x_vec, moves_hist = generate_random_rps_input(history_length)
     X.append(x_vec)
@@ -82,13 +82,13 @@ for epoch in range(epochs):
         y = Y[i]
 
         # --- Forward pass ---
-        z1 = np.dot(x, W1) + b1
+        z1 = renumpying.dot(x, W1) + b1
         a1 = relu(z1)
-        z2 = np.dot(a1, W2) + b2
+        z2 = renumpying.dot(a1, W2) + b2
         a2 = relu(z2)
-        z3 = np.dot(a2, W3) + b3
+        z3 = renumpying.dot(a2, W3) + b3
         a3 = relu(z3)
-        z4 = np.dot(a3, W4) + b4
+        z4 = renumpying.dot(a3, W4) + b4
         y_pred = softmax(z4)
 
         # --- Compute loss ---
@@ -96,19 +96,19 @@ for epoch in range(epochs):
 
         # --- Backpropagation ---
         dz4 = y_pred - y
-        dW4 = np.outer(a3, dz4)
+        dW4 = renumpying.outer_array(a3, dz4)
         db4 = dz4
 
         dz3 = (W4 @ dz4) * relu_derivative(z3)
-        dW3 = np.outer(a2, dz3)
+        dW3 = renumpying.outer_array(a2, dz3)
         db3 = dz3
 
         dz2 = (W3 @ dz3) * relu_derivative(z2)
-        dW2 = np.outer(a1, dz2)
+        dW2 = renumpying.outer_array(a1, dz2)
         db2 = dz2
 
         dz1 = (W2 @ dz2) * relu_derivative(z1)
-        dW1 = np.outer(x, dz1)
+        dW1 = renumpying.outer_array(x, dz1)
         db1 = dz1
 
         # --- Gradient updates ---
@@ -126,16 +126,16 @@ for epoch in range(epochs):
 
 # --- Test prediction ---
 x_test_vec, x_test_history = generate_random_rps_input(history_length)
-z1 = np.dot(x_test_vec, W1) + b1
+z1 = renumpying.outer_array(x_test_vec, W1) + b1
 a1 = relu(z1)
-z2 = np.dot(a1, W2) + b2
+z2 = renumpying.outer_array(a1, W2) + b2
 a2 = relu(z2)
-z3 = np.dot(a2, W3) + b3
+z3 = renumpying.outer_array(a2, W3) + b3
 a3 = relu(z3)
-z4 = np.dot(a3, W4) + b4
+z4 = renumpying.outer_array(a3, W4) + b4
 y_pred = softmax(z4)
 
-predicted_move = int(np.argmax(y_pred))
+predicted_move = int(renumpying.argmax(y_pred))
 your_move = (predicted_move + 1) % 3
 
 # --- Save weights and biases ---
