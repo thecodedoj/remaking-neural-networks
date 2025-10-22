@@ -34,5 +34,19 @@
     ],
     "predicted_move": 2,
     "your_move": 0
+  },
+  {
+    "history": [
+      0,
+      1,
+      2,
+      3,
+      0,
+      1,
+      2,
+      3
+    ],
+    "predicted_move": 1,
+    "your_move": 2
   }
 ]
