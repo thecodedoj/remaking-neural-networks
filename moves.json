@@ -1,0 +1,38 @@
+[
+  {
+    "history": [
+      0,
+      1,
+      2,
+      3,
+      0
+    ],
+    "predicted_move": 0,
+    "your_move": 1
+  },
+  {
+    "history": [
+      0,
+      1,
+      2,
+      3,
+      0,
+      1
+    ],
+    "predicted_move": 0,
+    "your_move": 1
+  },
+  {
+    "history": [
+      0,
+      1,
+      2,
+      3,
+      0,
+      1,
+      2
+    ],
+    "predicted_move": 2,
+    "your_move": 0
+  }
+]

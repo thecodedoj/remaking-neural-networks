@@ -35,8 +35,6 @@ def dot(a, b):
     if not a or not b:
         raise ValueError("Empty input arrays")
         
-    print(f"Input shapes: a{get_shape(a)}, b{get_shape(b)}")
-        
     # For vectors, convert single numbers to lists
     if not isinstance(a, list):
         a = [a]
@@ -55,13 +53,11 @@ def dot(a, b):
         # result[j] = sum(a[i] * b[i][j]) for all i
         # result length should be number of columns in b
         result = [0] * len(b[0])  # initialize with correct length
-        print(f"Creating result vector of length {len(b[0])}")  # Debug print
         for j in range(len(b[0])):  # for each column
             s = 0  # use temporary sum
             for i in range(len(b)):  # iterate over rows
                 s += a[i] * b[i][j]
             result[j] = s  # store final sum
-        print(f"Result vector length: {len(result)}")  # Debug print
         return result
     
     # Check if matrix-vector multiplication (a = 2D, b = 1D)

@@ -3,6 +3,39 @@ from renumpying import sqroot, sum_func, exp, zero
 from random_number_generators import lcg , uniformity , randint
 import redoing_numpy_arrays as rna
 import remaking_the_logarithm as rtl
+# Control verbose debug output
+VERBOSE = True
+
+# --- Numerical sanitizer (no math module) ---
+def sanitize_vector(v, clip_min=-50.0, clip_max=50.0):
+    """Replace NaN/Inf with 0 and clip values to [clip_min, clip_max]."""
+    out = []
+    for x in v:
+        # detect NaN: NaN != NaN
+        try:
+            if x != x:
+                x = 0.0
+        except Exception:
+            x = 0.0
+        # detect huge values (treated as inf)
+        try:
+            if abs(x) > 1e300:
+                x = 0.0
+        except Exception:
+            x = 0.0
+        # clip
+        if x < clip_min:
+            x = clip_min
+        if x > clip_max:
+            x = clip_max
+        out.append(float(x))
+    return out
+
+# Elementwise vector add helper (handles Array wrappers)
+def vec_add(a, b):
+    if hasattr(a, 'data'): a = a.data
+    if hasattr(b, 'data'): b = b.data
+    return [a[i] + b[i] for i in range(len(a))]
 # --- Load or initialize move history ---
 if os.path.exists("moves.json") and os.path.getsize("moves.json") > 0:
     with open("moves.json", "r") as f:
@@ -21,20 +54,24 @@ output_size = 3
 
 # --- Activation functions ---
 def relu(x):
-    print(f"ReLU input type: {type(x)}")  # Debug print
+    if VERBOSE:
+        print(f"ReLU input type: {type(x)}")  # Debug print
     # Convert Array to list
     if hasattr(x, 'data'):
         x = x.data
-        print(f"ReLU extracted data type: {type(x)}")  # Debug print
+        if VERBOSE:
+            print(f"ReLU extracted data type: {type(x)}")  # Debug print
     
     # Ensure x is a flat list
     if isinstance(x, list) and len(x) > 0 and isinstance(x[0], list):
         x = [item for sublist in x for item in sublist]  # flatten one level
         
-    print(f"ReLU x before: {x[:5]}...")  # Show first few elements
+    if VERBOSE:
+        print(f"ReLU x before: {x[:5]}...")  # Show first few elements
     result = [max(0, float(xi)) for xi in x]  # Convert to float to ensure consistency
-    print(f"ReLU input shape: {len(x)}, output shape: {len(result)}")
-    print(f"ReLU result first few elements: {result[:5]}...")  # Show first few elements
+    if VERBOSE:
+        print(f"ReLU input shape: {len(x)}, output shape: {len(result)}")
+        print(f"ReLU result first few elements: {result[:5]}...")  # Show first few elements
     return result
 
 def relu_derivative(x):
@@ -66,6 +103,9 @@ def softmax(x):
     m = max(x)
     exps = [exp(xi - m) for xi in x]
     s = sum_func(exps)
+    if s == 0:
+        # fallback to uniform distribution to avoid division by zero
+        return [1.0 / len(exps)] * len(exps)
     return [e / s for e in exps]
 
 # --- Xavier initialization ---
@@ -84,16 +124,16 @@ def print_shape(matrix, name):
         print(f"{name} shape: ({len(matrix)},)")
 
 W1 = xavier_init(input_size, hidden1_size)
-print_shape(W1, "W1")
+if VERBOSE: print_shape(W1, "W1")
 b1 = zero(hidden1_size)
 W2 = xavier_init(hidden1_size, hidden2_size)
-print_shape(W2, "W2")
+if VERBOSE: print_shape(W2, "W2")
 b2 = zero(hidden2_size)
 W3 = xavier_init(hidden2_size, hidden3_size)
-print_shape(W3, "W3")
+if VERBOSE: print_shape(W3, "W3")
 b3 = zero(hidden3_size)
 W4 = xavier_init(hidden3_size, output_size)
-print_shape(W4, "W4")
+if VERBOSE: print_shape(W4, "W4")
 b4 = zero(output_size)
 
 # --- Generate random RPS input ---
@@ -107,7 +147,8 @@ def generate_random_rps_input(k):
     return rna.Array(x), moves
 
 # --- Generate random dataset ---
-num_samples = 500
+# NOTE: lower these while debugging; restore later
+num_samples = 50
 X = []
 Y = renumpying.zero((num_samples, 3))
 for i in range(num_samples):
@@ -137,7 +178,7 @@ def cross_entropy(y_true, y_pred):
     return -sum_func(vals)
 
 # --- Training loop ---
-epochs = 2000
+epochs = 5
 learning_rate = 0.05
 
 for epoch in range(epochs):
@@ -147,20 +188,14 @@ for epoch in range(epochs):
         y = Y[i]
 
         # --- Forward pass ---
-        # Helper function for vector addition
-        def vec_add(a, b):
-            if hasattr(a, 'data'): a = a.data
-            if hasattr(b, 'data'): b = b.data
-            return [a[i] + b[i] for i in range(len(a))]
-
-        # Forward pass with explicit vector addition
-        z1 = vec_add(renumpying.dot(x, W1), b1)
+        # Forward pass with explicit vector addition (use global helper)
+        z1 = sanitize_vector(vec_add(renumpying.dot(x, W1), b1))
         a1 = relu(z1)
-        z2 = vec_add(renumpying.dot(a1, W2), b2)
+        z2 = sanitize_vector(vec_add(renumpying.dot(a1, W2), b2))
         a2 = relu(z2)
-        z3 = vec_add(renumpying.dot(a2, W3), b3)
+        z3 = sanitize_vector(vec_add(renumpying.dot(a2, W3), b3))
         a3 = relu(z3)
-        z4 = vec_add(renumpying.dot(a3, W4), b4)
+        z4 = sanitize_vector(vec_add(renumpying.dot(a3, W4), b4))
         print(f"z4 type: {type(z4)}, shape/length: {len(z4)}, first few elements: {z4[:3]}")
         y_pred = softmax(z4)
 
@@ -218,13 +253,13 @@ for epoch in range(epochs):
 
 # --- Test prediction ---
 x_test_vec, x_test_history = generate_random_rps_input(history_length)
-z1 = renumpying.dot(x_test_vec, W1) + b1
+z1 = sanitize_vector(vec_add(renumpying.dot(x_test_vec, W1), b1))
 a1 = relu(z1)
-z2 = renumpying.dot(a1, W2) + b2
+z2 = sanitize_vector(vec_add(renumpying.dot(a1, W2), b2))
 a2 = relu(z2)
-z3 = renumpying.dot(a2, W3) + b3
+z3 = sanitize_vector(vec_add(renumpying.dot(a2, W3), b3))
 a3 = relu(z3)
-z4 = renumpying.dot(a3, W4) + b4
+z4 = sanitize_vector(vec_add(renumpying.dot(a3, W4), b4))
 y_pred = softmax(z4)
 
 predicted_move = int(renumpying.argmax(y_pred))
